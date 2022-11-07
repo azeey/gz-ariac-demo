@@ -131,7 +131,8 @@ void ProximityRayPlugin::Load(sensors::SensorPtr _parent, sdf::ElementPtr _sdf)
     if (this->useLinkFrame)
     {
       std::string linkName = this->parentSensor->ParentName();
-      this->link = boost::dynamic_pointer_cast<physics::Link>(this->world->EntityByName(linkName));
+      this->link = boost::dynamic_pointer_cast<physics::Link>(
+          this->world->EntityByName(linkName));
     }
 
     this->objectDetected = false;

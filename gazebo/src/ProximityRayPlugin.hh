@@ -18,46 +18,46 @@
 #ifndef PROXIMITYRAYPLUGIN_HH_
 #define PROXIMITYRAYPLUGIN_HH_
 
-#include <ignition/msgs/boolean.pb.h>
+#include <gz/msgs/boolean.pb.h>
+#include <gz/msgs/laserscan.pb.h>
 
+#include <gz/sim/System.hh>
+#include <gz/transport/Node.hh>
 #include <optional>
 
-#include <ignition/gazebo/System.hh>
-#include <ignition/transport/Node.hh>
-
-namespace gazebo = ignition::gazebo;
-namespace transport = ignition::transport;
-namespace msgs = ignition::msgs;
+namespace sim = gz::sim;
+namespace transport = gz::transport;
+namespace msgs = gz::msgs;
 
 /// \brief A Ray Sensor Plugin which makes it act as a proximity sensor
 class ProximityRayPlugin 
-      : public gazebo::System,
-        public gazebo::ISystemConfigure,
-        public gazebo::ISystemPreUpdate,
-        public gazebo::ISystemPostUpdate
+      : public sim::System,
+        public sim::ISystemConfigure,
+        public sim::ISystemPreUpdate,
+        public sim::ISystemPostUpdate
   {
     /// \brief Update callback
     public: void OnNewLaserScans(const msgs::LaserScan &_msg);
 
     /// \brief Process the scan data and update state
     /// \returns true if the state has changed since processing the last scan
-    public: bool ProcessScan(const gazebo::UpdateInfo &_info,
-                             const gazebo::EntityComponentManager &_ecm);
+    public: bool ProcessScan(const sim::UpdateInfo &_info,
+                             const sim::EntityComponentManager &_ecm);
 
     /// \brief Load the plugin
     /// \param take in SDF root element
-    public: void Configure(const gazebo::Entity &_entity,
+    public: void Configure(const sim::Entity &_entity,
                            const std::shared_ptr<const sdf::Element> &_sdf,
-                           gazebo::EntityComponentManager &_ecm,
-                           gazebo::EventManager &_eventMgr);
+                           sim::EntityComponentManager &_ecm,
+                           sim::EventManager &_eventMgr);
 
     public: void PreUpdate(
-                const gazebo::UpdateInfo &_info,
-                gazebo::EntityComponentManager &_ecm) override;
+                const sim::UpdateInfo &_info,
+                sim::EntityComponentManager &_ecm) override;
 
     public: void PostUpdate(
-                const gazebo::UpdateInfo &_info,
-                const gazebo::EntityComponentManager &_ecm) override;
+                const sim::UpdateInfo &_info,
+                const sim::EntityComponentManager &_ecm) override;
     /// \brief Generate a scoped topic name from a local one
     /// \param local local topic name
     protected: std::string Topic(std::string topicName) const;
@@ -97,16 +97,16 @@ class ProximityRayPlugin
     protected: bool normallyOpen;
 
     /// \brief Pointer to parent link
-    protected: gazebo::Entity linkEntity{gazebo::kNullEntity};
+    protected: sim::Entity linkEntity{sim::kNullEntity};
 
     /// \brief Pointer to world
-    protected: gazebo::Entity worldEntity{gazebo::kNullEntity};
+    protected: sim::Entity worldEntity{sim::kNullEntity};
 
     /// \brief Pointer to this node for publishing
     protected: transport::Node node;
 
     /// \brief The parent sensor
-    protected: gazebo::Entity parentSensorEntity{gazebo::kNullEntity};
+    protected: sim::Entity parentSensorEntity{sim::kNullEntity};
     protected: std::string parentSensorName;
 
     protected: bool validConfig{false};

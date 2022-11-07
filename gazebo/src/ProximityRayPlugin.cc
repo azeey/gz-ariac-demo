@@ -17,54 +17,52 @@
 
 #include "ProximityRayPlugin.hh"
 
-#include <ignition/common/Console.hh>
-#include <ignition/gazebo/Util.hh>
-#include <ignition/gazebo/components/GpuLidar.hh>
-#include <ignition/gazebo/components/Name.hh>
-#include <ignition/gazebo/components/ParentEntity.hh>
-#include <ignition/gazebo/components/Sensor.hh>
-#include <ignition/gazebo/components/World.hh>
-#include <ignition/plugin/Register.hh>
-#include <ignition/transport/Node.hh>
+#include <gz/common/Console.hh>
+#include <gz/plugin/Register.hh>
+#include <gz/sim/Util.hh>
+#include <gz/sim/components/GpuLidar.hh>
+#include <gz/sim/components/Name.hh>
+#include <gz/sim/components/ParentEntity.hh>
+#include <gz/sim/components/Sensor.hh>
+#include <gz/sim/components/World.hh>
+#include <gz/transport/Node.hh>
 #include <regex>
 #include <sdf/Lidar.hh>
 
-using namespace ignition;
-using namespace gazebo;
+using namespace gz;
+using namespace sim;
 
 // Register this plugin with the simulator
-IGNITION_ADD_PLUGIN(ProximityRayPlugin,
-                    System,
-                    ProximityRayPlugin::ISystemConfigure,
-                    ProximityRayPlugin::ISystemPreUpdate,
-                    ProximityRayPlugin::ISystemPostUpdate)
+GZ_ADD_PLUGIN(ProximityRayPlugin,
+              sim::System,
+              sim::ISystemConfigure,
+              sim::ISystemPreUpdate,
+              sim::ISystemPostUpdate)
 
-#define gzdbg igndbg
-#define gzerr ignerr
 
 //////////////////////////////////////////////////
 std::string ProximityRayPlugin::Topic(std::string topicName) const
 {
   std::string globalTopicName = "/";
-  // this->GetHandle() is not supported. The "name" attribute of a plugin is 
+  // this->GetHandle() is not supported. The "name" attribute of a plugin is
   // used to specify the class name within the plugin.
-  globalTopicName += this->parentSensorName + "/" + topicName; 
+  globalTopicName += this->parentSensorName + "/" + topicName;
   return std::regex_replace(globalTopicName, std::regex("::"), "/");
 }
 
 /////////////////////////////////////////////////
 // Analog to void ProximityRayPlugin::Load(sensors::SensorPtr _parent, sdf::ElementPtr _sdf)
 void ProximityRayPlugin::Configure(
-    const gazebo::Entity &_entity,
+    const sim::Entity &_entity,
     const std::shared_ptr<const sdf::Element> &_sdf,
-    gazebo::EntityComponentManager &_ecm, gazebo::EventManager &_eventMgr)
+    sim::EntityComponentManager &_ecm,
+    sim::EventManager &_eventMgr)
 {
   // Get the name of the parent sensor
   this->parentSensorEntity = _entity;
-  this->parentSensorName = gazebo::removeParentScope(
-      gazebo::scopedName(_entity, _ecm, "::", false), "::");
+  this->parentSensorName = sim::removeParentScope(
+      sim::scopedName(_entity, _ecm, "::", false), "::");
 
-  // TODO(azeey) check if parent is sensor
   if (!_ecm.Component<components::GpuLidar>(_entity))
   {
     gzerr << "ProximityRayPlugin requires a Ray Sensor as its parent";
@@ -137,8 +135,8 @@ void ProximityRayPlugin::Configure(
   this->validConfig = true;
 }
 
-void ProximityRayPlugin::PreUpdate(const gazebo::UpdateInfo &_info,
-                                   gazebo::EntityComponentManager &_ecm)
+void ProximityRayPlugin::PreUpdate(const sim::UpdateInfo &_info,
+                                   sim::EntityComponentManager &_ecm)
 {
   static bool ranOnce{false};
   if (!ranOnce && this->validConfig)
@@ -147,8 +145,9 @@ void ProximityRayPlugin::PreUpdate(const gazebo::UpdateInfo &_info,
     // TODO(azeey) This currently doesn't work for rendering sensors.
     // See https://github.com/gazebosim/gz-sim/issues/85
     //
-    // auto rayTopicName =
-    //     _ecm.ComponentData<components::SensorTopic>(this->parentSensorEntity);
+    // std::string rayTopicName =
+    //     *_ecm.ComponentData<components::SensorTopic>(
+    //         this->parentSensorEntity);
     //
     // A copy of the logic in `src/rendering/RenderUtils.cc` to determine the
     // topic of a rendering sensor.
@@ -160,7 +159,7 @@ void ProximityRayPlugin::PreUpdate(const gazebo::UpdateInfo &_info,
     if (rayTopicName.empty())
     {
       rayTopicName =
-          gazebo::scopedName(this->parentSensorEntity, _ecm) + "/scan";
+          sim::scopedName(this->parentSensorEntity, _ecm) + "/scan";
     }
 
     gzdbg << "ProximityRayPlugin subscribing to: " << rayTopicName << std::endl;
@@ -171,8 +170,8 @@ void ProximityRayPlugin::PreUpdate(const gazebo::UpdateInfo &_info,
 }
 
 // Most of the logic in the old ProximityRayPlugin::OnNewLaserScans()
-void ProximityRayPlugin::PostUpdate(const gazebo::UpdateInfo &_info,
-                                    const gazebo::EntityComponentManager &_ecm)
+void ProximityRayPlugin::PostUpdate(const sim::UpdateInfo &_info,
+                                    const sim::EntityComponentManager &_ecm)
 {
   if (!this->validConfig || _info.paused)
     return;
@@ -182,7 +181,7 @@ void ProximityRayPlugin::PostUpdate(const gazebo::UpdateInfo &_info,
 
   // Fill message
   this->stateMsg.mutable_header()->mutable_stamp()->CopyFrom(
-      gazebo::convert<msgs::Time>(_info.simTime));
+      sim::convert<msgs::Time>(_info.simTime));
   this->stateMsg.set_data(this->objectDetected);
 
   // Publish sensor state message
@@ -202,12 +201,13 @@ void ProximityRayPlugin::PostUpdate(const gazebo::UpdateInfo &_info,
 void ProximityRayPlugin::OnNewLaserScans(const msgs::LaserScan &_msg)
 {
   std::lock_guard<std::mutex> lk(this->mutex);
+  // Store message and process it in PostUpdate
   this->lastMsg = _msg;
 }
 
 /////////////////////////////////////////////////
-bool ProximityRayPlugin::ProcessScan(const gazebo::UpdateInfo &_info,
-                                     const gazebo::EntityComponentManager &_ecm)
+bool ProximityRayPlugin::ProcessScan(const sim::UpdateInfo &_info,
+                                     const sim::EntityComponentManager &_ecm)
 {
   bool stateChanged = false;
   // Prevent new scans from arriving while we're processing this one
@@ -255,7 +255,7 @@ bool ProximityRayPlugin::ProcessScan(const gazebo::UpdateInfo &_info,
   if (this->useLinkFrame)
   {
     // TODO: deal with sensors oriented differently
-    auto sensorPose = gazebo::worldPose(this->parentSensorEntity, _ecm);
+    auto sensorPose = sim::worldPose(this->parentSensorEntity, _ecm);
     this->sensingRangeMin += sensorPose.Pos().X();
     this->sensingRangeMax += sensorPose.Pos().X();
   }

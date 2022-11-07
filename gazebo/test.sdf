@@ -66,9 +66,9 @@
             </sphere>
           </geometry>
           <material>
-            <ambient>0.8 0.8 0.8 1</ambient>
-            <diffuse>0.8 0.8 0.8 1</diffuse>
-            <specular>0.8 0.8 0.8 1</specular>
+            <ambient>1.0 1.0 1.0 1</ambient>
+            <diffuse>1.0 1.0 1.0 1</diffuse>
+            <specular>1.0 1.0 1.0 1</specular>
           </material>
         </visual>
         <visual name="sensor_range">
@@ -84,7 +84,7 @@
             <diffuse>1.0 0.0 0.0 1</diffuse>
             <specular>1.0 0.0 0.0 1</specular>
           </material>
-          <transparency>0.8</transparency>
+          <transparency>0.4</transparency>
         </visual>
         <collision name="c1">
           <geometry>
